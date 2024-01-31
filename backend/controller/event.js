@@ -10,7 +10,7 @@ const { upload } = require("../multer")
 const fs = require('fs')
 // create event
 router.post(
-  "/create-event",upload.array('images'),
+  "/create-event", upload.array('images'),
   catchAsyncErrors(async (req, res, next) => {
     try {
       const shopId = req.body.shopId;
@@ -19,8 +19,8 @@ router.post(
         return next(new ErrorHandler("Shop Id is invalid!", 400));
       } else {
         const files = req.files
-        const imagesLinks = files.map((file)=> `${file.filename}`)
-      
+        const imagesLinks = files.map((file) => `${file.filename}`)
+
         const eventData = req.body;
         eventData.images = imagesLinks;
         eventData.shop = shop;
@@ -75,17 +75,22 @@ router.delete(
     try {
       const event = await Event.findById(req.params.id);
 
-      if (!product) {
+      if (!event) {
         return next(new ErrorHandler("Product is not found with this id", 404));
-      }    
-
-      for (let i = 0; 1 < product.images.length; i++) {
-        const result = await cloudinary.v2.uploader.destroy(
-          event.images[i].public_id
-        );
       }
-    
-      await event.remove();
+
+      event.images.forEach((imageUrl) => {
+        const filename = imageUrl;
+        const filePath = `uploads/${filename}`;
+        fs.unlink(filePath, (err) => {
+          if (err) {
+            console.log(err)
+            res.status(500).json({ message: "Error deleting file" })
+          }
+        })
+      })
+      await event.deleteOne();
+
 
       res.status(201).json({
         success: true,
