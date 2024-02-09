@@ -193,9 +193,7 @@ router.put(
   catchAsyncErrors(async (req, res, next) => {
     try {
       const { email, password, phoneNumber, name } = req.body;
-
       const user = await User.findOne({ email }).select("+password");
-
       if (!user) {
         return next(new ErrorHandler("User not found", 400));
       }
@@ -228,30 +226,25 @@ router.put(
 router.put(
   "/update-avatar",
   isAuthenticated,
+  upload.single('image'),
   catchAsyncErrors(async (req, res, next) => {
     try {
       let existsUser = await User.findById(req.user.id);
-      if (req.body.avatar !== "") {
-        const imageId = existsUser.avatar.public_id;
 
-        await cloudinary.v2.uploader.destroy(imageId);
-
-        const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
-          folder: "multer/avatars",
-          width: 150,
-        });
-
-        existsUser.avatar = {
-          public_id: myCloud.public_id,
-          url: myCloud.secure_url,
-        };
-      }
-
-      await existsUser.save();
-
+      const existsAvatarPath = `uploads/${existsUser.avatar}`
+      fs.unlink(existsAvatarPath, (err) => {
+        if (err) {
+          console.log(err)
+          res.status(500).json({ message: "Error deleting file" })
+        }
+      })
+      const fileUrl = path.join(req.file.filename)
+      const user = await User.findByIdAndUpdate(req.user.id, {
+        avatar: fileUrl
+      })
       res.status(200).json({
         success: true,
-        user: existsUser,
+        user,
       });
     } catch (error) {
       return next(new ErrorHandler(error.message, 500));
@@ -266,10 +259,10 @@ router.put(
   catchAsyncErrors(async (req, res, next) => {
     try {
       const user = await User.findById(req.user.id);
-
       const sameTypeAddress = user.addresses.find(
         (address) => address.addressType === req.body.addressType
       );
+
       if (sameTypeAddress) {
         return next(
           new ErrorHandler(`${req.body.addressType} address already exists`)
@@ -279,14 +272,12 @@ router.put(
       const existsAddress = user.addresses.find(
         (address) => address._id === req.body._id
       );
-
       if (existsAddress) {
         Object.assign(existsAddress, req.body);
       } else {
         // add the new address to the array
         user.addresses.push(req.body);
       }
-
       await user.save();
 
       res.status(200).json({
