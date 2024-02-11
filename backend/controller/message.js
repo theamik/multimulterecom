@@ -4,22 +4,19 @@ const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const express = require("express");
 const cloudinary = require("cloudinary");
 const router = express.Router();
-
+const { upload } = require("../multer")
 // create new message
 router.post(
   "/create-new-message",
+  upload.array('images'),
   catchAsyncErrors(async (req, res, next) => {
     try {
       const messageData = req.body;
-
-      if (req.body.images) {
-        const myCloud = await cloudinary.v2.uploader.upload(req.body.images, {
-          folder: "messages",
-        });
-        messageData.images = {
-          public_id: myCloud.public_id,
-          url: myCloud.url,
-        };
+console.log(req.files)
+      if (req.files) {
+        const files = req.files
+        const imagesLinks = files.map((file)=> `${file.filename}`)
+        messageData.images = imagesLinks;
       }
 
       messageData.conversationId = req.body.conversationId;
@@ -28,7 +25,7 @@ router.post(
 
       const message = new Messages({
         conversationId: messageData.conversationId,
-        text: messageData.text,
+        text:  messageData.text ? messageData.text : undefined,
         sender: messageData.sender,
         images: messageData.images ? messageData.images : undefined,
       });
