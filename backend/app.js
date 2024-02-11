@@ -6,7 +6,7 @@ const bodyParser = require("body-parser");
 const cors = require('cors');
 
 const corsOption = {
-    origin: ['http://localhost:3000'],
+    origin: ['https://laptopworkshop.vercel.app'],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
 }
